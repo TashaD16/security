@@ -1,5 +1,6 @@
 package com.example.modulea.controller;
 
+import com.example.common.security.annotation.RequiresGeneralAccess;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -14,6 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/data")
 public class DataController {
 
+    @RequiresGeneralAccess
     @PostMapping("/export")
     public Mono<ResponseEntity<Map<String, Object>>> exportData(@RequestBody Map<String, Object> params) {
         Map<String, Object> response = new HashMap<>();
@@ -22,6 +24,7 @@ public class DataController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresGeneralAccess
     @PostMapping("/import")
     public Mono<ResponseEntity<Map<String, Object>>> importData(@RequestBody Map<String, Object> data) {
         Map<String, Object> response = new HashMap<>();

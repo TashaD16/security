@@ -1,7 +1,8 @@
 package com.example.gateway.config;
 
-import com.example.gateway.security.AuthorizationRule;
 import com.example.gateway.security.CustomAuthorizationManager;
+import com.example.gateway.security.EndpointSecurityScanner;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
@@ -13,11 +14,22 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authorization.AuthorizationContext;
+import reactor.core.publisher.Mono;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.core.Authentication;
 
-import java.util.List;
+import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
- * Centralized security configuration for all modules
+ * Centralized security configuration for all modules.
+ * Security rules are automatically discovered from annotations on controller methods:
+ * @RequiresReadDeclaration, @RequiresWriteDeclaration, @RequiresApproveDeclaration,
+ * @RequiresReadWare, @RequiresWriteWare, @RequiresWareInventory, @RequiresGeneralAccess
+ * 
+ * No need to manually specify .pathMatchers() - all endpoints are automatically scanned
+ * and configured based on their annotations.
  */
 @Configuration
 @EnableWebFluxSecurity
@@ -25,25 +37,33 @@ import java.util.List;
 public class SecurityConfig {
 
     private final CustomAuthorizationManager authorizationManager;
-    private final List<AuthorizationRule> authorizationRules;
+    private final ApplicationContext applicationContext;
 
     public SecurityConfig(CustomAuthorizationManager authorizationManager, 
-                         List<AuthorizationRule> authorizationRules) {
+                         ApplicationContext applicationContext) {
         this.authorizationManager = authorizationManager;
-        this.authorizationRules = authorizationRules;
+        this.applicationContext = applicationContext;
     }
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public EndpointSecurityScanner endpointSecurityScanner() {
+        return new EndpointSecurityScanner(applicationContext, authorizationManager);
+    }
+
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, 
+                                                         EndpointSecurityScanner scanner) {
+        // Automatically scan all endpoints and their security annotations
+        Map<String, BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>>> securityMap = 
+            scanner.scanEndpoints();
+        
         return http
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints
                 .authorizeExchange(exchanges -> {
-                    // Apply authorization rules from configuration
-                    for (AuthorizationRule rule : authorizationRules) {
-                        for (String pathPattern : rule.getPathPatterns()) {
-                            exchanges.pathMatchers(pathPattern)
-                                    .access(rule.getAuthorizationMethod());
-                        }
+                    // Automatically configure security for all discovered endpoints
+                    for (Map.Entry<String, BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>>> entry : securityMap.entrySet()) {
+                        exchanges.pathMatchers(entry.getKey())
+                                .access(entry.getValue());
                     }
                     
                     // All other requests require authentication

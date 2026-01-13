@@ -1,5 +1,8 @@
 package com.example.modulea.controller;
 
+import com.example.common.security.annotation.RequiresApproveDeclaration;
+import com.example.common.security.annotation.RequiresReadDeclaration;
+import com.example.common.security.annotation.RequiresWriteDeclaration;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -14,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/api/declarations")
 public class DeclarationController {
 
+    @RequiresReadDeclaration
     @GetMapping("/{declarationId}/details")
     public Mono<ResponseEntity<Map<String, Object>>> getDeclarationDetails(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
@@ -23,6 +27,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresApproveDeclaration
     @PostMapping("/{declarationId}/approve")
     public Mono<ResponseEntity<Map<String, Object>>> approveDeclaration(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
@@ -32,6 +37,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresWriteDeclaration
     @PostMapping("/{declarationId}/submit")
     public Mono<ResponseEntity<Map<String, Object>>> submitDeclaration(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
@@ -41,6 +47,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresApproveDeclaration
     @PostMapping("/{declarationId}/reject")
     public Mono<ResponseEntity<Map<String, Object>>> rejectDeclaration(
             @PathVariable String declarationId,
@@ -53,6 +60,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresWriteDeclaration
     @PostMapping("/{declarationId}/cancel")
     public Mono<ResponseEntity<Map<String, Object>>> cancelDeclaration(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();

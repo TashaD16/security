@@ -1,5 +1,6 @@
 package com.example.modulea.controller;
 
+import com.example.common.security.annotation.RequiresGeneralAccess;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -14,6 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/items")
 public class ItemController {
 
+    @RequiresGeneralAccess
     @GetMapping("/list")
     public Mono<ResponseEntity<Map<String, Object>>> listItems() {
         Map<String, Object> response = new HashMap<>();
@@ -22,6 +24,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresGeneralAccess
     @PostMapping("/create")
     public Mono<ResponseEntity<Map<String, Object>>> createItem(@RequestBody Map<String, Object> item) {
         Map<String, Object> response = new HashMap<>();
@@ -30,6 +33,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresGeneralAccess
     @PutMapping("/{id}/update")
     public Mono<ResponseEntity<Map<String, Object>>> updateItem(
             @PathVariable String id,
@@ -40,6 +44,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresGeneralAccess
     @DeleteMapping("/{id}/delete")
     public Mono<ResponseEntity<Map<String, Object>>> deleteItem(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();
@@ -47,6 +52,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresGeneralAccess
     @GetMapping("/{id}/details")
     public Mono<ResponseEntity<Map<String, Object>>> getItemDetails(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();
@@ -55,6 +61,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
+    @RequiresGeneralAccess
     @GetMapping("/search")
     public Mono<ResponseEntity<Map<String, Object>>> searchItems(@RequestParam(required = false) String query) {
         Map<String, Object> response = new HashMap<>();
