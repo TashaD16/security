@@ -245,34 +245,27 @@ public class EndpointSecurityScanner {
      */
     private ReactiveAuthorizationManager<AuthorizationContext> extractAuthorizationMethod(Method method) {
         // Check for security annotations using AnnotatedElementUtils for better proxy support
-        // Create ReactiveAuthorizationManager wrapper - note that authentication parameter is Mono<Authentication>
+        // Methods now accept Mono<Authentication> directly, so we can use method references
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresReadDeclaration.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkReadDeclaration(authentication, context));
+            return authorizationManager::checkReadDeclaration;
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresWriteDeclaration.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkWriteDeclaration(authentication, context));
+            return authorizationManager::checkWriteDeclaration;
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresApproveDeclaration.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkApproveDeclaration(authentication, context));
+            return authorizationManager::checkApproveDeclaration;
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresReadWare.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkReadWare(authentication, context));
+            return authorizationManager::checkReadWare;
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresWriteWare.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkWriteWare(authentication, context));
+            return authorizationManager::checkWriteWare;
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresWareInventory.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkWareInventory(authentication, context));
+            return authorizationManager::checkWareInventory;
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresGeneralAccess.class)) {
-            return (authenticationMono, context) -> authenticationMono
-                    .flatMap(authentication -> authorizationManager.checkGeneralAccess(authentication, context));
+            return authorizationManager::checkGeneralAccess;
         }
         
         return null;

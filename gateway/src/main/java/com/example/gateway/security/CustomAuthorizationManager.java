@@ -40,110 +40,123 @@ public class CustomAuthorizationManager {
      * Check read access for declarations
      */
     public Mono<AuthorizationDecision> checkReadDeclaration(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         String declarationId = extractPathVariableFromContext(context, PATH_VAR_DECLARATION_ID);
-        logger.info("Checking read access for declaration: {} by user: {}", 
-                declarationId, getUsername(authentication));
         
-        return checkAccess(authentication, AUTHORITY_READ_DECLARATION, declarationId,
-                this::checkResourceOwnership);
+        return authenticationMono
+                .doOnNext(auth -> logger.info("Checking read access for declaration: {} by user: {}", 
+                        declarationId, auth.getName()))
+                .flatMap(authentication -> checkAccess(authentication, AUTHORITY_READ_DECLARATION, declarationId,
+                        this::checkResourceOwnership))
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
      * Check write access for declarations
      */
     public Mono<AuthorizationDecision> checkWriteDeclaration(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         String declarationId = extractPathVariableFromContext(context, PATH_VAR_DECLARATION_ID);
-        logger.info("Checking write access for declaration: {} by user: {}", 
-                declarationId, getUsername(authentication));
         
-        return checkAccess(authentication, AUTHORITY_WRITE_DECLARATION, declarationId,
-                this::checkResourceOwnership);
+        return authenticationMono
+                .doOnNext(auth -> logger.info("Checking write access for declaration: {} by user: {}", 
+                        declarationId, auth.getName()))
+                .flatMap(authentication -> checkAccess(authentication, AUTHORITY_WRITE_DECLARATION, declarationId,
+                        this::checkResourceOwnership))
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
      * Check access for declaration approval (moduleA specific)
      */
     public Mono<AuthorizationDecision> checkApproveDeclaration(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         String declarationId = extractPathVariableFromContext(context, PATH_VAR_DECLARATION_ID);
-        logger.info("Checking approve access for declaration: {} by user: {}", 
-                declarationId, getUsername(authentication));
         
-        return checkAccess(authentication, AUTHORITY_APPROVE_DECLARATION, null, null);
+        return authenticationMono
+                .doOnNext(auth -> logger.info("Checking approve access for declaration: {} by user: {}", 
+                        declarationId, auth.getName()))
+                .flatMap(authentication -> checkAccess(authentication, AUTHORITY_APPROVE_DECLARATION, null, null))
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
      * Check read access for wares
      */
     public Mono<AuthorizationDecision> checkReadWare(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         String wareId = extractPathVariableFromContext(context, PATH_VAR_WARE_ID);
-        logger.info("Checking read access for ware: {} by user: {}", 
-                wareId, getUsername(authentication));
         
-        return checkAccess(authentication, AUTHORITY_READ_WARE, wareId,
-                this::checkResourceOwnership);
+        return authenticationMono
+                .doOnNext(auth -> logger.info("Checking read access for ware: {} by user: {}", 
+                        wareId, auth.getName()))
+                .flatMap(authentication -> checkAccess(authentication, AUTHORITY_READ_WARE, wareId,
+                        this::checkResourceOwnership))
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
      * Check write access for wares
      */
     public Mono<AuthorizationDecision> checkWriteWare(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         String wareId = extractPathVariableFromContext(context, PATH_VAR_WARE_ID);
-        logger.info("Checking write access for ware: {} by user: {}", 
-                wareId, getUsername(authentication));
         
-        return checkAccess(authentication, AUTHORITY_WRITE_WARE, wareId,
-                this::checkResourceOwnership);
+        return authenticationMono
+                .doOnNext(auth -> logger.info("Checking write access for ware: {} by user: {}", 
+                        wareId, auth.getName()))
+                .flatMap(authentication -> checkAccess(authentication, AUTHORITY_WRITE_WARE, wareId,
+                        this::checkResourceOwnership))
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
      * Check access for ware inventory (moduleB specific)
      */
     public Mono<AuthorizationDecision> checkWareInventory(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         String wareId = extractPathVariableFromContext(context, PATH_VAR_WARE_ID);
-        logger.info("Checking inventory access for ware: {} by user: {}", 
-                wareId, getUsername(authentication));
         
-        return checkAccess(authentication, AUTHORITY_MANAGE_INVENTORY, null, null);
+        return authenticationMono
+                .doOnNext(auth -> logger.info("Checking inventory access for ware: {} by user: {}", 
+                        wareId, auth.getName()))
+                .flatMap(authentication -> checkAccess(authentication, AUTHORITY_MANAGE_INVENTORY, null, null))
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
      * Check access for general CRUD operations
      */
     public Mono<AuthorizationDecision> checkGeneralAccess(
-            Authentication authentication,
+            Mono<Authentication> authenticationMono,
             AuthorizationContext context) {
         
         ServerWebExchange exchange = context.getExchange();
         String path = exchange.getRequest().getPath().value();
         String method = exchange.getRequest().getMethod().name();
         
-        logger.debug("Checking general access for {} {} by user: {}", 
-                method, path, getUsername(authentication));
-        
-        if (!isAuthenticated(authentication)) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        // Allow all authenticated users for general operations
-        return Mono.just(new AuthorizationDecision(true));
+        return authenticationMono
+                .doOnNext(auth -> logger.debug("Checking general access for {} {} by user: {}", 
+                        method, path, auth.getName()))
+                .flatMap(authentication -> {
+                    if (isAuthenticated(authentication)) {
+                        return Mono.just(new AuthorizationDecision(true));
+                    }
+                    return Mono.just(new AuthorizationDecision(false));
+                })
+                .switchIfEmpty(Mono.just(new AuthorizationDecision(false)));
     }
 
     /**
@@ -228,12 +241,5 @@ public class CustomAuthorizationManager {
             return resourceId.startsWith(username.substring(0, 1).toUpperCase());
         }
         return true; // Default allow if we can't determine ownership
-    }
-
-    /**
-     * Get username from authentication or return "anonymous"
-     */
-    private String getUsername(Authentication authentication) {
-        return authentication != null ? authentication.getName() : "anonymous";
     }
 }
