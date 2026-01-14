@@ -2,6 +2,7 @@ package com.example.gateway.config;
 
 import com.example.gateway.security.CustomAuthorizationManager;
 import com.example.gateway.security.EndpointSecurityScanner;
+import com.example.gateway.security.EndpointSecurityScanResult;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +23,7 @@ import java.util.Map;
  * Centralized security configuration for all modules.
  * Security rules are automatically discovered from annotations on controller methods:
  * @RequiresReadDeclaration, @RequiresWriteDeclaration, @RequiresApproveDeclaration,
- * @RequiresReadWare, @RequiresWriteWare, @RequiresWareInventory, @RequiresGeneralAccess
+ * @RequiresReadWare, @RequiresWriteWare, @RequiresWareInventory, @RequiresGeneralAccess, @PermitAll
  * 
  * No need to manually specify .pathMatchers() - all endpoints are automatically scanned
  * and configured based on their annotations.
@@ -50,14 +51,18 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, 
                                                          EndpointSecurityScanner scanner) {
         // Automatically scan all endpoints and their security annotations
-        Map<String, ReactiveAuthorizationManager<AuthorizationContext>> securityMap = 
-            scanner.scanEndpoints();
+        EndpointSecurityScanResult scanResult = scanner.scanEndpoints();
         
         return http
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints
                 .authorizeExchange(exchanges -> {
-                    // Automatically configure security for all discovered endpoints
-                    for (Map.Entry<String, ReactiveAuthorizationManager<AuthorizationContext>> entry : securityMap.entrySet()) {
+                    // Apply permitAll for public endpoints
+                    for (String permitAllPath : scanResult.getPermitAllPaths()) {
+                        exchanges.pathMatchers(permitAllPath).permitAll();
+                    }
+                    
+                    // Automatically configure security for all discovered secured endpoints
+                    for (Map.Entry<String, ReactiveAuthorizationManager<AuthorizationContext>> entry : scanResult.getSecuredPaths().entrySet()) {
                         exchanges.pathMatchers(entry.getKey())
                                 .access(entry.getValue());
                     }

@@ -37,11 +37,12 @@ public class EndpointSecurityScanner {
     }
     
     /**
-     * Scans all controllers and builds security configuration map
-     * @return Map of path patterns to authorization managers
+     * Scans all controllers and builds security configuration
+     * @return EndpointSecurityScanResult with secured paths and permitAll paths
      */
-    public Map<String, ReactiveAuthorizationManager<AuthorizationContext>> scanEndpoints() {
+    public EndpointSecurityScanResult scanEndpoints() {
         Map<String, ReactiveAuthorizationManager<AuthorizationContext>> securityMap = new HashMap<>();
+        Set<String> permitAllPaths = new HashSet<>();
         
         try {
             // First, try to get controllers from ApplicationContext (if they are Spring beans)
@@ -73,29 +74,40 @@ public class EndpointSecurityScanner {
                     List<String> paths = extractPaths(method, basePath);
                     
                     if (!paths.isEmpty()) {
-                        ReactiveAuthorizationManager<AuthorizationContext> authManager = 
-                            extractAuthorizationMethod(method);
-                        
-                        if (authManager != null) {
+                        // Check for @PermitAll first
+                        if (AnnotatedElementUtils.hasAnnotation(method, PermitAll.class)) {
                             for (String path : paths) {
-                                securityMap.put(path, authManager);
-                                logger.info("Auto-configured security for path: {} using annotation from method: {}.{}", 
+                                permitAllPaths.add(path);
+                                logger.info("Auto-configured permitAll for path: {} using annotation from method: {}.{}", 
                                         path, controllerClass.getSimpleName(), method.getName());
                             }
                         } else {
-                            logger.warn("No security annotation found on method {} in controller {} - endpoint will require authentication only", 
-                                    method.getName(), controllerClass.getSimpleName());
+                            // Check for other security annotations
+                            ReactiveAuthorizationManager<AuthorizationContext> authManager = 
+                                extractAuthorizationMethod(method);
+                            
+                            if (authManager != null) {
+                                for (String path : paths) {
+                                    securityMap.put(path, authManager);
+                                    logger.info("Auto-configured security for path: {} using annotation from method: {}.{}", 
+                                            path, controllerClass.getSimpleName(), method.getName());
+                                }
+                            } else {
+                                logger.warn("No security annotation found on method {} in controller {} - endpoint will require authentication only", 
+                                        method.getName(), controllerClass.getSimpleName());
+                            }
                         }
                     }
                 }
             }
             
-            logger.info("Auto-configured security for {} endpoint paths", securityMap.size());
+            logger.info("Auto-configured security for {} endpoint paths, {} permitAll paths", 
+                    securityMap.size(), permitAllPaths.size());
         } catch (Exception e) {
             logger.error("Error scanning endpoints", e);
         }
         
-        return securityMap;
+        return new EndpointSecurityScanResult(securityMap, permitAllPaths);
     }
     
     /**
