@@ -15,12 +15,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.authorization.AuthorizationContext;
-import reactor.core.publisher.Mono;
-import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.core.Authentication;
-
+import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import java.util.Map;
-import java.util.function.BiFunction;
 
 /**
  * Centralized security configuration for all modules.
@@ -54,14 +50,14 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, 
                                                          EndpointSecurityScanner scanner) {
         // Automatically scan all endpoints and their security annotations
-        Map<String, BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>>> securityMap = 
+        Map<String, ReactiveAuthorizationManager<AuthorizationContext>> securityMap = 
             scanner.scanEndpoints();
         
         return http
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints
                 .authorizeExchange(exchanges -> {
                     // Automatically configure security for all discovered endpoints
-                    for (Map.Entry<String, BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>>> entry : securityMap.entrySet()) {
+                    for (Map.Entry<String, ReactiveAuthorizationManager<AuthorizationContext>> entry : securityMap.entrySet()) {
                         exchanges.pathMatchers(entry.getKey())
                                 .access(entry.getValue());
                     }

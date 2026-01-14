@@ -3,7 +3,6 @@ package com.example.gateway.security;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.server.authorization.AuthorizationContext;
 import org.springframework.web.server.ServerWebExchange;
@@ -14,31 +13,14 @@ import java.util.regex.Pattern;
 
 /**
  * Custom Authorization Manager for handling authorization logic
- * with path variable extraction and custom access control
+ * with path variable extraction and custom access control.
+ * 
+ * This class provides methods that are used to create ReactiveAuthorizationManager
+ * instances for Spring Security WebFlux.
  */
-public class CustomAuthorizationManager implements AuthorizationManager<AuthorizationContext> {
+public class CustomAuthorizationManager {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomAuthorizationManager.class);
-
-    @Override
-    public AuthorizationDecision check(
-            org.springframework.security.core.Authentication authentication,
-            AuthorizationContext context) {
-        
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        
-        logger.debug("Checking authorization for path: {}, user: {}", 
-                path, authentication != null ? authentication.getName() : "anonymous");
-        
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.warn("Unauthenticated request to: {}", path);
-            return new AuthorizationDecision(false);
-        }
-        
-        // Default allow for authenticated users (can be customized)
-        return new AuthorizationDecision(true);
-    }
 
     /**
      * Check read access for declarations

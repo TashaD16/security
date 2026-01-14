@@ -6,18 +6,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
-import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.TypeFilter;
 
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.function.BiFunction;
-import reactor.core.publisher.Mono;
-import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.web.server.authorization.AuthorizationContext;
 
 /**
@@ -43,10 +38,10 @@ public class EndpointSecurityScanner {
     
     /**
      * Scans all controllers and builds security configuration map
-     * @return Map of path patterns to authorization methods
+     * @return Map of path patterns to authorization managers
      */
-    public Map<String, BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>>> scanEndpoints() {
-        Map<String, BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>>> securityMap = new HashMap<>();
+    public Map<String, ReactiveAuthorizationManager<AuthorizationContext>> scanEndpoints() {
+        Map<String, ReactiveAuthorizationManager<AuthorizationContext>> securityMap = new HashMap<>();
         
         try {
             // First, try to get controllers from ApplicationContext (if they are Spring beans)
@@ -78,12 +73,12 @@ public class EndpointSecurityScanner {
                     List<String> paths = extractPaths(method, basePath);
                     
                     if (!paths.isEmpty()) {
-                        BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>> authMethod = 
+                        ReactiveAuthorizationManager<AuthorizationContext> authManager = 
                             extractAuthorizationMethod(method);
                         
-                        if (authMethod != null) {
+                        if (authManager != null) {
                             for (String path : paths) {
-                                securityMap.put(path, authMethod);
+                                securityMap.put(path, authManager);
                                 logger.info("Auto-configured security for path: {} using annotation from method: {}.{}", 
                                         path, controllerClass.getSimpleName(), method.getName());
                             }
@@ -233,31 +228,39 @@ public class EndpointSecurityScanner {
     }
     
     /**
-     * Extract authorization method from method annotations
+     * Extract authorization manager from method annotations
      * Uses AnnotatedElementUtils for more reliable annotation detection
      */
-    private BiFunction<Authentication, AuthorizationContext, Mono<AuthorizationDecision>> extractAuthorizationMethod(Method method) {
+    private ReactiveAuthorizationManager<AuthorizationContext> extractAuthorizationMethod(Method method) {
         // Check for security annotations using AnnotatedElementUtils for better proxy support
+        // Create ReactiveAuthorizationManager wrapper - note that authentication parameter is Mono<Authentication>
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresReadDeclaration.class)) {
-            return authorizationManager::checkReadDeclaration;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkReadDeclaration(authentication, context));
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresWriteDeclaration.class)) {
-            return authorizationManager::checkWriteDeclaration;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkWriteDeclaration(authentication, context));
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresApproveDeclaration.class)) {
-            return authorizationManager::checkApproveDeclaration;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkApproveDeclaration(authentication, context));
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresReadWare.class)) {
-            return authorizationManager::checkReadWare;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkReadWare(authentication, context));
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresWriteWare.class)) {
-            return authorizationManager::checkWriteWare;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkWriteWare(authentication, context));
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresWareInventory.class)) {
-            return authorizationManager::checkWareInventory;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkWareInventory(authentication, context));
         }
         if (AnnotatedElementUtils.hasAnnotation(method, RequiresGeneralAccess.class)) {
-            return authorizationManager::checkGeneralAccess;
+            return (authenticationMono, context) -> authenticationMono
+                    .flatMap(authentication -> authorizationManager.checkGeneralAccess(authentication, context));
         }
         
         return null;
