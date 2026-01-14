@@ -99,6 +99,41 @@ return (authenticationMono, context) -> authenticationMono
 - Эндпоинты с другими аннотациями безопасности → требуют аутентификации и авторизации
 - Эндпоинты без аннотаций → требуют аутентификации (`.anyExchange().authenticated()`)
 
+### 8. Рефакторинг кода для соответствия принципам SOLID, DRY, KISS
+
+**Задача**: Улучшить качество кода, устранить дублирование и улучшить поддерживаемость.
+
+**Проблемы, выявленные при анализе кода**:
+1. Дублирование кода в методах `check*` класса `CustomAuthorizationManager`
+2. Отсутствие констант для строковых литералов (authority strings)
+3. Дублирование логики проверки владения ресурсами
+
+**Выполненный рефакторинг**:
+
+#### CustomAuthorizationManager - устранение дублирования:
+- **Добавлены константы** для authority strings:
+  - `AUTHORITY_ADMIN`, `AUTHORITY_READ_DECLARATION`, `AUTHORITY_WRITE_DECLARATION`, и т.д.
+  - `PATH_VAR_DECLARATION_ID`, `PATH_VAR_WARE_ID` для имен переменных пути
+- **Вынесена общая логика** в метод `checkAccess()`:
+  - Универсальный метод для проверки доступа с authority и опциональной проверкой владения
+  - Принимает `BiFunction<String, String, Boolean>` для проверки владения
+- **Добавлены вспомогательные методы**:
+  - `isAuthenticated()` - проверка аутентификации
+  - `hasAuthority()` - проверка authority
+  - `extractPathVariableFromContext()` - извлечение переменной из контекста
+  - `getUsername()` - получение username из authentication
+- **Объединены методы проверки владения**:
+  - `checkDeclarationOwnership()` и `checkWareOwnership()` объединены в один метод `checkResourceOwnership(String username, String resourceId)`
+
+**Результаты рефакторинга**:
+- ✅ Устранено дублирование кода (принцип DRY)
+- ✅ Добавлены константы (Java Code Conventions)
+- ✅ Улучшена читаемость и поддерживаемость кода
+- ✅ Упрощена логика методов `check*` (принцип KISS)
+- ✅ Код стал более модульным и расширяемым
+
+**Примечание**: Метод `extractAuthorizationMethod()` в `EndpointSecurityScanner` оставлен без изменений, так как рефакторинг с использованием Map усложнил бы код и нарушил принцип KISS. Текущая реализация проста и понятна.
+
 ## Структура файлов
 
 ### Gateway Module
@@ -127,6 +162,7 @@ return (authenticationMono, context) -> authenticationMono
 
 1. `459e074` - "Add automatic endpoint security scanning - remove manual pathMatchers() configuration"
 2. `2cc2f71` - "Fix ReactiveAuthorizationManager - use flatMap for Mono<Authentication>"
+3. `eabe1f3` - "Add @PermitAll annotation for public endpoints"
 
 ## Результат
 
@@ -137,6 +173,9 @@ return (authenticationMono, context) -> authenticationMono
 - Реактивной моделью безопасности Spring WebFlux
 - Поддержкой публичных эндпоинтов через аннотацию @PermitAll
 - Разделением публичных и защищенных эндпоинтов при сканировании
+- Рефакторингом кода для соответствия принципам SOLID, DRY, KISS
+- Константами для authority strings (Java Code Conventions)
+- Устраненным дублированием кода в CustomAuthorizationManager
 
 ## Использование аннотаций
 

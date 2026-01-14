@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.function.BiFunction;
 
 /**
  * Custom Authorization Manager for handling authorization logic
@@ -22,6 +23,19 @@ public class CustomAuthorizationManager {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomAuthorizationManager.class);
 
+    // Authority constants
+    private static final String AUTHORITY_ADMIN = "ADMIN";
+    private static final String AUTHORITY_READ_DECLARATION = "READ_DECLARATION";
+    private static final String AUTHORITY_WRITE_DECLARATION = "WRITE_DECLARATION";
+    private static final String AUTHORITY_APPROVE_DECLARATION = "APPROVE_DECLARATION";
+    private static final String AUTHORITY_READ_WARE = "READ_WARE";
+    private static final String AUTHORITY_WRITE_WARE = "WRITE_WARE";
+    private static final String AUTHORITY_MANAGE_INVENTORY = "MANAGE_INVENTORY";
+
+    // Path variable names
+    private static final String PATH_VAR_DECLARATION_ID = "declarationId";
+    private static final String PATH_VAR_WARE_ID = "wareId";
+
     /**
      * Check read access for declarations
      */
@@ -29,29 +43,12 @@ public class CustomAuthorizationManager {
             Authentication authentication,
             AuthorizationContext context) {
         
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        String declarationId = extractPathVariable(path, "declarationId");
-        
+        String declarationId = extractPathVariableFromContext(context, PATH_VAR_DECLARATION_ID);
         logger.info("Checking read access for declaration: {} by user: {}", 
-                declarationId, authentication.getName());
+                declarationId, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        // Custom logic: check if user has READ_DECLARATION authority or owns the declaration
-        boolean hasAccess = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("READ_DECLARATION") ||
-                             a.getAuthority().equals("ADMIN"));
-        
-        // Additional check: verify ownership (example logic)
-        if (declarationId != null && hasAccess) {
-            hasAccess = checkDeclarationOwnership(authentication.getName(), declarationId);
-        }
-        
-        logger.debug("Read declaration access decision: {} for declaration: {}", hasAccess, declarationId);
-        return Mono.just(new AuthorizationDecision(hasAccess));
+        return checkAccess(authentication, AUTHORITY_READ_DECLARATION, declarationId,
+                this::checkResourceOwnership);
     }
 
     /**
@@ -61,27 +58,12 @@ public class CustomAuthorizationManager {
             Authentication authentication,
             AuthorizationContext context) {
         
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        String declarationId = extractPathVariable(path, "declarationId");
-        
+        String declarationId = extractPathVariableFromContext(context, PATH_VAR_DECLARATION_ID);
         logger.info("Checking write access for declaration: {} by user: {}", 
-                declarationId, authentication.getName());
+                declarationId, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        boolean hasAccess = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("WRITE_DECLARATION") ||
-                             a.getAuthority().equals("ADMIN"));
-        
-        if (declarationId != null && hasAccess) {
-            hasAccess = checkDeclarationOwnership(authentication.getName(), declarationId);
-        }
-        
-        logger.debug("Write declaration access decision: {} for declaration: {}", hasAccess, declarationId);
-        return Mono.just(new AuthorizationDecision(hasAccess));
+        return checkAccess(authentication, AUTHORITY_WRITE_DECLARATION, declarationId,
+                this::checkResourceOwnership);
     }
 
     /**
@@ -91,24 +73,11 @@ public class CustomAuthorizationManager {
             Authentication authentication,
             AuthorizationContext context) {
         
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        String declarationId = extractPathVariable(path, "declarationId");
-        
+        String declarationId = extractPathVariableFromContext(context, PATH_VAR_DECLARATION_ID);
         logger.info("Checking approve access for declaration: {} by user: {}", 
-                declarationId, authentication.getName());
+                declarationId, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        // Only ADMIN or APPROVER role can approve declarations
-        boolean hasAccess = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("APPROVE_DECLARATION") ||
-                             a.getAuthority().equals("ADMIN"));
-        
-        logger.debug("Approve declaration access decision: {} for declaration: {}", hasAccess, declarationId);
-        return Mono.just(new AuthorizationDecision(hasAccess));
+        return checkAccess(authentication, AUTHORITY_APPROVE_DECLARATION, null, null);
     }
 
     /**
@@ -118,27 +87,12 @@ public class CustomAuthorizationManager {
             Authentication authentication,
             AuthorizationContext context) {
         
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        String wareId = extractPathVariable(path, "wareId");
-        
+        String wareId = extractPathVariableFromContext(context, PATH_VAR_WARE_ID);
         logger.info("Checking read access for ware: {} by user: {}", 
-                wareId, authentication.getName());
+                wareId, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        boolean hasAccess = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("READ_WARE") ||
-                             a.getAuthority().equals("ADMIN"));
-        
-        if (wareId != null && hasAccess) {
-            hasAccess = checkWareOwnership(authentication.getName(), wareId);
-        }
-        
-        logger.debug("Read ware access decision: {} for ware: {}", hasAccess, wareId);
-        return Mono.just(new AuthorizationDecision(hasAccess));
+        return checkAccess(authentication, AUTHORITY_READ_WARE, wareId,
+                this::checkResourceOwnership);
     }
 
     /**
@@ -148,27 +102,12 @@ public class CustomAuthorizationManager {
             Authentication authentication,
             AuthorizationContext context) {
         
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        String wareId = extractPathVariable(path, "wareId");
-        
+        String wareId = extractPathVariableFromContext(context, PATH_VAR_WARE_ID);
         logger.info("Checking write access for ware: {} by user: {}", 
-                wareId, authentication.getName());
+                wareId, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        boolean hasAccess = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("WRITE_WARE") ||
-                             a.getAuthority().equals("ADMIN"));
-        
-        if (wareId != null && hasAccess) {
-            hasAccess = checkWareOwnership(authentication.getName(), wareId);
-        }
-        
-        logger.debug("Write ware access decision: {} for ware: {}", hasAccess, wareId);
-        return Mono.just(new AuthorizationDecision(hasAccess));
+        return checkAccess(authentication, AUTHORITY_WRITE_WARE, wareId,
+                this::checkResourceOwnership);
     }
 
     /**
@@ -178,23 +117,11 @@ public class CustomAuthorizationManager {
             Authentication authentication,
             AuthorizationContext context) {
         
-        ServerWebExchange exchange = context.getExchange();
-        String path = exchange.getRequest().getPath().value();
-        String wareId = extractPathVariable(path, "wareId");
-        
+        String wareId = extractPathVariableFromContext(context, PATH_VAR_WARE_ID);
         logger.info("Checking inventory access for ware: {} by user: {}", 
-                wareId, authentication.getName());
+                wareId, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Mono.just(new AuthorizationDecision(false));
-        }
-        
-        boolean hasAccess = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("MANAGE_INVENTORY") ||
-                             a.getAuthority().equals("ADMIN"));
-        
-        logger.debug("Ware inventory access decision: {} for ware: {}", hasAccess, wareId);
-        return Mono.just(new AuthorizationDecision(hasAccess));
+        return checkAccess(authentication, AUTHORITY_MANAGE_INVENTORY, null, null);
     }
 
     /**
@@ -209,14 +136,64 @@ public class CustomAuthorizationManager {
         String method = exchange.getRequest().getMethod().name();
         
         logger.debug("Checking general access for {} {} by user: {}", 
-                method, path, authentication != null ? authentication.getName() : "anonymous");
+                method, path, getUsername(authentication));
         
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (!isAuthenticated(authentication)) {
             return Mono.just(new AuthorizationDecision(false));
         }
         
         // Allow all authenticated users for general operations
         return Mono.just(new AuthorizationDecision(true));
+    }
+
+    /**
+     * Common method for checking access with authority and optional ownership check
+     */
+    private Mono<AuthorizationDecision> checkAccess(
+            Authentication authentication,
+            String requiredAuthority,
+            String resourceId,
+            BiFunction<String, String, Boolean> ownershipChecker) {
+        
+        if (!isAuthenticated(authentication)) {
+            return Mono.just(new AuthorizationDecision(false));
+        }
+        
+        boolean hasAccess = hasAuthority(authentication, requiredAuthority);
+        
+        // Additional ownership check if resource ID and checker are provided
+        if (resourceId != null && ownershipChecker != null && hasAccess) {
+            String username = authentication.getName();
+            hasAccess = ownershipChecker.apply(username, resourceId);
+        }
+        
+        logger.debug("Access decision: {} for resource: {}", hasAccess, resourceId);
+        return Mono.just(new AuthorizationDecision(hasAccess));
+    }
+
+    /**
+     * Check if user is authenticated
+     */
+    private boolean isAuthenticated(Authentication authentication) {
+        return authentication != null && authentication.isAuthenticated();
+    }
+
+    /**
+     * Check if user has the required authority or ADMIN authority
+     */
+    private boolean hasAuthority(Authentication authentication, String requiredAuthority) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(requiredAuthority) ||
+                             a.getAuthority().equals(AUTHORITY_ADMIN));
+    }
+
+    /**
+     * Extract path variable from authorization context
+     */
+    private String extractPathVariableFromContext(AuthorizationContext context, String variableName) {
+        ServerWebExchange exchange = context.getExchange();
+        String path = exchange.getRequest().getPath().value();
+        return extractPathVariable(path, variableName);
     }
 
     /**
@@ -242,26 +219,21 @@ public class CustomAuthorizationManager {
     }
 
     /**
-     * Check if user owns the declaration (example implementation)
+     * Check if user owns the resource by username and resource ID (unified method for declarations and wares)
+     * In real implementation, this would query a database
+     * For now, using simple logic: resources starting with user's initial are owned
      */
-    private boolean checkDeclarationOwnership(String username, String declarationId) {
-        // In real implementation, this would query a database
-        // For now, using simple logic: declarations starting with user's initial are owned
-        if (declarationId != null && username != null && !username.isEmpty()) {
-            return declarationId.startsWith(username.substring(0, 1).toUpperCase());
+    private boolean checkResourceOwnership(String username, String resourceId) {
+        if (resourceId != null && username != null && !username.isEmpty()) {
+            return resourceId.startsWith(username.substring(0, 1).toUpperCase());
         }
         return true; // Default allow if we can't determine ownership
     }
 
     /**
-     * Check if user owns the ware (example implementation)
+     * Get username from authentication or return "anonymous"
      */
-    private boolean checkWareOwnership(String username, String wareId) {
-        // In real implementation, this would query a database
-        // For now, using simple logic: wares starting with user's initial are owned
-        if (wareId != null && username != null && !username.isEmpty()) {
-            return wareId.startsWith(username.substring(0, 1).toUpperCase());
-        }
-        return true; // Default allow if we can't determine ownership
+    private String getUsername(Authentication authentication) {
+        return authentication != null ? authentication.getName() : "anonymous";
     }
 }
