@@ -5,10 +5,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
+import org.springframework.core.type.classreading.MetadataReader;
+import org.springframework.core.type.classreading.MetadataReaderFactory;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -111,33 +115,55 @@ public class EndpointSecurityScanner {
     }
     
     /**
-     * Scan classpath for controller classes
+     * Scan classpath for controller classes automatically in all modules
+     * Uses ResourcePatternResolver to scan all jar files and classes in classpath
+     * This works even if modules are not direct dependencies (scans all jars in classpath)
      */
     private Map<String, Object> scanClasspathForControllers() {
         Map<String, Object> controllers = new HashMap<>();
         
         try {
-            ClassPathScanningCandidateComponentProvider scanner = 
-                new ClassPathScanningCandidateComponentProvider(false);
+            ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+            MetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory(resourcePatternResolver);
             
-            // Add filters for @RestController and @Controller
-            scanner.addIncludeFilter(new AnnotationTypeFilter(org.springframework.web.bind.annotation.RestController.class));
-            scanner.addIncludeFilter(new AnnotationTypeFilter(Controller.class));
+            // Scan all classes in com.example package and subpackages from all jars/classes in classpath
+            // CLASSPATH_ALL_URL_PREFIX ("classpath*:") searches in all jar files, not just current module
+            String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
+                    "com/example/**/*.class";
             
-            // Scan packages from moduleA and moduleB
-            Set<org.springframework.beans.factory.config.BeanDefinition> candidates = new HashSet<>();
-            candidates.addAll(scanner.findCandidateComponents("com.example.modulea.controller"));
-            candidates.addAll(scanner.findCandidateComponents("com.example.moduleb.controller"));
+            Resource[] resources = resourcePatternResolver.getResources(packageSearchPath);
             
-            for (org.springframework.beans.factory.config.BeanDefinition candidate : candidates) {
+            logger.debug("Scanning {} class files for controllers", resources.length);
+            
+            for (Resource resource : resources) {
                 try {
-                    Class<?> clazz = Class.forName(candidate.getBeanClassName());
-                    // Create a placeholder object for scanning (we only need the class)
-                    controllers.put(clazz.getSimpleName(), clazz);
-                } catch (ClassNotFoundException e) {
-                    logger.warn("Could not load class: {}", candidate.getBeanClassName());
+                    if (!resource.isReadable()) {
+                        continue;
+                    }
+                    
+                    MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(resource);
+                    String className = metadataReader.getClassMetadata().getClassName();
+                    
+                    // Check if class has @RestController or @Controller annotation
+                    if (metadataReader.getAnnotationMetadata().hasAnnotation(
+                            org.springframework.web.bind.annotation.RestController.class.getName()) ||
+                        metadataReader.getAnnotationMetadata().hasAnnotation(
+                            Controller.class.getName())) {
+                        
+                        try {
+                            Class<?> clazz = Class.forName(className);
+                            controllers.put(clazz.getSimpleName(), clazz);
+                            logger.debug("Found controller class: {}", className);
+                        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+                            logger.warn("Could not load controller class: {} - {}", className, e.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.debug("Error processing resource {}: {}", resource.getFilename(), e.getMessage());
                 }
             }
+            
+            logger.info("Found {} controllers in classpath scan", controllers.size());
         } catch (Exception e) {
             logger.error("Error scanning classpath for controllers", e);
         }
