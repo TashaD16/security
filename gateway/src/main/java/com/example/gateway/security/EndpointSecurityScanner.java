@@ -70,12 +70,31 @@ public class EndpointSecurityScanner {
                 Object controller = entry.getValue();
                 Class<?> controllerClass = getControllerClass(controller);
                 
+                logger.debug("Processing controller: {}", controllerClass.getName());
+                
                 // Get base path from @RequestMapping on class
                 String basePath = extractBasePath(controllerClass);
+                logger.debug("Base path for controller {}: {}", controllerClass.getSimpleName(), basePath);
                 
-                // Scan all methods
-                for (Method method : controllerClass.getDeclaredMethods()) {
+                // Scan all methods (both declared and inherited public methods)
+                Method[] methods = controllerClass.getMethods();
+                logger.debug("Found {} methods in controller {}", methods.length, controllerClass.getSimpleName());
+                
+                for (Method method : methods) {
+                    // Skip synthetic methods, bridge methods, and Object methods
+                    if (method.isSynthetic() || method.isBridge() || 
+                        method.getDeclaringClass() == Object.class) {
+                        continue;
+                    }
+                    
+                    // Only process methods with HTTP mapping annotations
+                    if (!hasHttpMapping(method)) {
+                        logger.debug("Skipping method {} - no HTTP mapping annotation", method.getName());
+                        continue;
+                    }
+                    
                     List<String> paths = extractPaths(method, basePath);
+                    logger.debug("Method {} extracted {} paths: {}", method.getName(), paths.size(), paths);
                     
                     if (!paths.isEmpty()) {
                         // Check for @PermitAll first
@@ -263,6 +282,18 @@ public class EndpointSecurityScanner {
         }
         
         return fullPaths;
+    }
+    
+    /**
+     * Check if method has any HTTP mapping annotation
+     */
+    private boolean hasHttpMapping(Method method) {
+        return AnnotatedElementUtils.hasAnnotation(method, GetMapping.class) ||
+               AnnotatedElementUtils.hasAnnotation(method, PostMapping.class) ||
+               AnnotatedElementUtils.hasAnnotation(method, PutMapping.class) ||
+               AnnotatedElementUtils.hasAnnotation(method, DeleteMapping.class) ||
+               AnnotatedElementUtils.hasAnnotation(method, PatchMapping.class) ||
+               AnnotatedElementUtils.hasAnnotation(method, RequestMapping.class);
     }
     
     /**
