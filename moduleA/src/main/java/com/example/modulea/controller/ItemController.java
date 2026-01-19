@@ -1,7 +1,7 @@
 package com.example.modulea.controller;
 
-import com.example.common.security.annotation.RequiresGeneralAccess;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -10,12 +10,13 @@ import java.util.Map;
 
 /**
  * Controller for general item operations (common endpoints)
+ * Security is configured using @PreAuthorize method-level security annotations.
  */
 @RestController
 @RequestMapping("/api/items")
 public class ItemController {
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @GetMapping("/list")
     public Mono<ResponseEntity<Map<String, Object>>> listItems() {
         Map<String, Object> response = new HashMap<>();
@@ -24,7 +25,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @PostMapping("/create")
     public Mono<ResponseEntity<Map<String, Object>>> createItem(@RequestBody Map<String, Object> item) {
         Map<String, Object> response = new HashMap<>();
@@ -33,7 +34,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @PutMapping("/{id}/update")
     public Mono<ResponseEntity<Map<String, Object>>> updateItem(
             @PathVariable String id,
@@ -44,7 +45,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @DeleteMapping("/{id}/delete")
     public Mono<ResponseEntity<Map<String, Object>>> deleteItem(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();
@@ -52,7 +53,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @GetMapping("/{id}/details")
     public Mono<ResponseEntity<Map<String, Object>>> getItemDetails(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();
@@ -61,7 +62,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @GetMapping("/search")
     public Mono<ResponseEntity<Map<String, Object>>> searchItems(@RequestParam(required = false) String query) {
         Map<String, Object> response = new HashMap<>();

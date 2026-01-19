@@ -1,9 +1,5 @@
 package com.example.gateway.config;
 
-import com.example.gateway.security.CustomAuthorizationManager;
-import com.example.gateway.security.EndpointSecurityScanner;
-import com.example.gateway.security.EndpointSecurityScanResult;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
@@ -15,59 +11,31 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.authorization.AuthorizationContext;
-import org.springframework.security.authorization.ReactiveAuthorizationManager;
-import java.util.Map;
 
 /**
  * Centralized security configuration for all modules.
- * Security rules are automatically discovered from annotations on controller methods:
- * @RequiresReadDeclaration, @RequiresWriteDeclaration, @RequiresApproveDeclaration,
- * @RequiresReadWare, @RequiresWriteWare, @RequiresWareInventory, @RequiresGeneralAccess, @PermitAll
  * 
- * No need to manually specify .pathMatchers() - all endpoints are automatically scanned
- * and configured based on their annotations.
+ * Security is now configured using method-level security annotations (@PreAuthorize) 
+ * on controller methods. This eliminates the need for EndpointSecurityScanner.
+ * 
+ * All endpoints require authentication by default. Access control is defined 
+ * using @PreAuthorize annotations on controller methods.
  */
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
 
-    private final CustomAuthorizationManager authorizationManager;
-    private final ApplicationContext applicationContext;
-
-    public SecurityConfig(CustomAuthorizationManager authorizationManager, 
-                         ApplicationContext applicationContext) {
-        this.authorizationManager = authorizationManager;
-        this.applicationContext = applicationContext;
-    }
-
     @Bean
-    public EndpointSecurityScanner endpointSecurityScanner() {
-        return new EndpointSecurityScanner(applicationContext, authorizationManager);
-    }
-
-    @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, 
-                                                         EndpointSecurityScanner scanner) {
-        // Automatically scan all endpoints and their security annotations
-        EndpointSecurityScanResult scanResult = scanner.scanEndpoints();
-        
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints
                 .authorizeExchange(exchanges -> {
-                    // Apply permitAll for public endpoints
-                    for (String permitAllPath : scanResult.getPermitAllPaths()) {
-                        exchanges.pathMatchers(permitAllPath).permitAll();
-                    }
-                    
-                    // Automatically configure security for all discovered secured endpoints
-                    for (Map.Entry<String, ReactiveAuthorizationManager<AuthorizationContext>> entry : scanResult.getSecuredPaths().entrySet()) {
-                        exchanges.pathMatchers(entry.getKey())
-                                .access(entry.getValue());
-                    }
+                    // Permit actuator endpoints and public paths
+                    exchanges.pathMatchers("/actuator/**").permitAll();
                     
                     // All other requests require authentication
+                    // Method-level security (@PreAuthorize) handles authorization
                     exchanges.anyExchange().authenticated();
                 })
                 .httpBasic(httpBasic -> {}) // Enable basic authentication
@@ -118,10 +86,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public CustomAuthorizationManager authorizationManager() {
-        return new CustomAuthorizationManager();
     }
 }

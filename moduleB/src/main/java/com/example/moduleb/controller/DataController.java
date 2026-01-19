@@ -1,7 +1,7 @@
 package com.example.moduleb.controller;
 
-import com.example.common.security.annotation.RequiresGeneralAccess;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -10,12 +10,13 @@ import java.util.Map;
 
 /**
  * Controller for data operations (common endpoints)
+ * Security is configured using @PreAuthorize method-level security annotations.
  */
 @RestController
 @RequestMapping("/api/data")
 public class DataController {
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @PostMapping("/export")
     public Mono<ResponseEntity<Map<String, Object>>> exportData(@RequestBody Map<String, Object> params) {
         Map<String, Object> response = new HashMap<>();
@@ -24,7 +25,7 @@ public class DataController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @PostMapping("/import")
     public Mono<ResponseEntity<Map<String, Object>>> importData(@RequestBody Map<String, Object> data) {
         Map<String, Object> response = new HashMap<>();

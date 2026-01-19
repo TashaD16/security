@@ -1,7 +1,7 @@
 package com.example.modulea.controller;
 
-import com.example.common.security.annotation.RequiresGeneralAccess;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -10,12 +10,13 @@ import java.util.Map;
 
 /**
  * Controller for report operations (common endpoints)
+ * Security is configured using @PreAuthorize method-level security annotations.
  */
 @RestController
 @RequestMapping("/api/reports")
 public class ReportController {
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @PostMapping("/generate")
     public Mono<ResponseEntity<Map<String, Object>>> generateReport(@RequestBody Map<String, Object> params) {
         Map<String, Object> response = new HashMap<>();
@@ -24,7 +25,7 @@ public class ReportController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @GetMapping("/list")
     public Mono<ResponseEntity<Map<String, Object>>> listReports() {
         Map<String, Object> response = new HashMap<>();
@@ -33,7 +34,7 @@ public class ReportController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresGeneralAccess
+    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
     @GetMapping("/{id}/download")
     public Mono<ResponseEntity<Map<String, Object>>> downloadReport(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();

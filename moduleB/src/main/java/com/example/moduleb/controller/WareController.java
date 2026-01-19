@@ -1,9 +1,7 @@
 package com.example.moduleb.controller;
 
-import com.example.common.security.annotation.RequiresReadWare;
-import com.example.common.security.annotation.RequiresWareInventory;
-import com.example.common.security.annotation.RequiresWriteWare;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -12,12 +10,13 @@ import java.util.Map;
 
 /**
  * Controller for ware operations (moduleB specific endpoints)
+ * Security is configured using @PreAuthorize method-level security annotations.
  */
 @RestController
 @RequestMapping("/api/wares")
 public class WareController {
 
-    @RequiresReadWare
+    @PreAuthorize("@securityMethods.canReadWare(#wareId, authentication)")
     @GetMapping("/{wareId}/details")
     public Mono<ResponseEntity<Map<String, Object>>> getWareDetails(@PathVariable String wareId) {
         Map<String, Object> response = new HashMap<>();
@@ -27,7 +26,7 @@ public class WareController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresWareInventory
+    @PreAuthorize("@securityMethods.canManageInventory(authentication)")
     @GetMapping("/{wareId}/inventory")
     public Mono<ResponseEntity<Map<String, Object>>> getWareInventory(@PathVariable String wareId) {
         Map<String, Object> response = new HashMap<>();
@@ -37,7 +36,7 @@ public class WareController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresWriteWare
+    @PreAuthorize("@securityMethods.canWriteWare(#wareId, authentication)")
     @PutMapping("/{wareId}/update")
     public Mono<ResponseEntity<Map<String, Object>>> updateWare(
             @PathVariable String wareId,
@@ -49,7 +48,7 @@ public class WareController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresWriteWare
+    @PreAuthorize("@securityMethods.canWriteWare(#wareId, authentication)")
     @PostMapping("/{wareId}/reserve")
     public Mono<ResponseEntity<Map<String, Object>>> reserveWare(
             @PathVariable String wareId,
@@ -61,7 +60,7 @@ public class WareController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresWriteWare
+    @PreAuthorize("@securityMethods.canWriteWare(#wareId, authentication)")
     @PostMapping("/{wareId}/release")
     public Mono<ResponseEntity<Map<String, Object>>> releaseWare(@PathVariable String wareId) {
         Map<String, Object> response = new HashMap<>();

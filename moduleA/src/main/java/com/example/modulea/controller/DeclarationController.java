@@ -1,9 +1,7 @@
 package com.example.modulea.controller;
 
-import com.example.common.security.annotation.RequiresApproveDeclaration;
-import com.example.common.security.annotation.RequiresReadDeclaration;
-import com.example.common.security.annotation.RequiresWriteDeclaration;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -12,12 +10,13 @@ import java.util.Map;
 
 /**
  * Controller for declaration operations (moduleA specific endpoints)
+ * Security is configured using @PreAuthorize method-level security annotations.
  */
 @RestController
 @RequestMapping("/api/declarations")
 public class DeclarationController {
 
-    @RequiresReadDeclaration
+    @PreAuthorize("@securityMethods.canReadDeclaration(#declarationId, authentication)")
     @GetMapping("/{declarationId}/details")
     public Mono<ResponseEntity<Map<String, Object>>> getDeclarationDetails(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
@@ -27,7 +26,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresApproveDeclaration
+    @PreAuthorize("@securityMethods.canApproveDeclaration(authentication)")
     @PostMapping("/{declarationId}/approve")
     public Mono<ResponseEntity<Map<String, Object>>> approveDeclaration(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
@@ -37,7 +36,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresWriteDeclaration
+    @PreAuthorize("@securityMethods.canWriteDeclaration(#declarationId, authentication)")
     @PostMapping("/{declarationId}/submit")
     public Mono<ResponseEntity<Map<String, Object>>> submitDeclaration(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
@@ -47,7 +46,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresApproveDeclaration
+    @PreAuthorize("@securityMethods.canApproveDeclaration(authentication)")
     @PostMapping("/{declarationId}/reject")
     public Mono<ResponseEntity<Map<String, Object>>> rejectDeclaration(
             @PathVariable String declarationId,
@@ -60,7 +59,7 @@ public class DeclarationController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @RequiresWriteDeclaration
+    @PreAuthorize("@securityMethods.canWriteDeclaration(#declarationId, authentication)")
     @PostMapping("/{declarationId}/cancel")
     public Mono<ResponseEntity<Map<String, Object>>> cancelDeclaration(@PathVariable String declarationId) {
         Map<String, Object> response = new HashMap<>();
