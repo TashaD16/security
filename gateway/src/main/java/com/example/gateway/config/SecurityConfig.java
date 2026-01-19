@@ -44,7 +44,9 @@ public class SecurityConfig {
 
     @Bean
     public EndpointSecurityScanner endpointSecurityScanner() {
-        return new EndpointSecurityScanner(applicationContext, authorizationManager);
+        EndpointSecurityScanner scanner = new EndpointSecurityScanner(applicationContext, authorizationManager);
+        // Scanner will auto-initialize via @PostConstruct
+        return scanner;
     }
 
     @Bean

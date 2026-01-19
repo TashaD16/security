@@ -24,6 +24,16 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>moduleA</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>moduleB</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
