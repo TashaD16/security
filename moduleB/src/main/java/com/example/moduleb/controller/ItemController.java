@@ -16,7 +16,7 @@ import java.util.Map;
 @RequestMapping("/api/items")
 public class ItemController {
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Mono<ResponseEntity<Map<String, Object>>> listItems() {
         Map<String, Object> response = new HashMap<>();
@@ -25,7 +25,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/create")
     public Mono<ResponseEntity<Map<String, Object>>> createItem(@RequestBody Map<String, Object> item) {
         Map<String, Object> response = new HashMap<>();
@@ -34,7 +34,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/{id}/update")
     public Mono<ResponseEntity<Map<String, Object>>> updateItem(
             @PathVariable String id,
@@ -45,7 +45,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}/delete")
     public Mono<ResponseEntity<Map<String, Object>>> deleteItem(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();
@@ -53,7 +53,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}/details")
     public Mono<ResponseEntity<Map<String, Object>>> getItemDetails(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();
@@ -62,7 +62,7 @@ public class ItemController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/search")
     public Mono<ResponseEntity<Map<String, Object>>> searchItems(@RequestParam(required = false) String query) {
         Map<String, Object> response = new HashMap<>();

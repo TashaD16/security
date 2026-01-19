@@ -16,7 +16,7 @@ import java.util.Map;
 @RequestMapping("/api/reports")
 public class ReportController {
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/generate")
     public Mono<ResponseEntity<Map<String, Object>>> generateReport(@RequestBody Map<String, Object> params) {
         Map<String, Object> response = new HashMap<>();
@@ -25,7 +25,7 @@ public class ReportController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Mono<ResponseEntity<Map<String, Object>>> listReports() {
         Map<String, Object> response = new HashMap<>();
@@ -34,7 +34,7 @@ public class ReportController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}/download")
     public Mono<ResponseEntity<Map<String, Object>>> downloadReport(@PathVariable String id) {
         Map<String, Object> response = new HashMap<>();

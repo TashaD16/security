@@ -16,7 +16,7 @@ import java.util.Map;
 @RequestMapping("/api/data")
 public class DataController {
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/export")
     public Mono<ResponseEntity<Map<String, Object>>> exportData(@RequestBody Map<String, Object> params) {
         Map<String, Object> response = new HashMap<>();
@@ -25,7 +25,7 @@ public class DataController {
         return Mono.just(ResponseEntity.ok(response));
     }
 
-    @PreAuthorize("@securityMethods.hasGeneralAccess(authentication)")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/import")
     public Mono<ResponseEntity<Map<String, Object>>> importData(@RequestBody Map<String, Object> data) {
         Map<String, Object> response = new HashMap<>();

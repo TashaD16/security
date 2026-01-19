@@ -80,10 +80,4 @@ public class SecurityExpressionMethods {
         return authHelper.hasAuthority(authentication, "MANAGE_INVENTORY");
     }
 
-    /**
-     * Check if user has any authority (general access - just authenticated)
-     */
-    public boolean hasGeneralAccess(Authentication authentication) {
-        return authentication != null && authentication.isAuthenticated();
-    }
 }
